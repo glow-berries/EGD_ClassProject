@@ -1,5 +1,5 @@
 using System.Collections;
-using System.Runtime.CompilerServices;
+using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -11,7 +11,13 @@ public class PlatformerController : MonoBehaviour
 
     private float moveSpeed = 5f;
 
-    [SerializeField] private float jumpForce = 10f;
+    [SerializeField] private TextMeshProUGUI coinsText;
+
+    [SerializeField] private TextMeshProUGUI deathText;
+
+    [SerializeField] private float jumpForce = 30f;
+
+    [SerializeField] private float dashForce = 1f;
 
     private int numJumps = 0;
 
@@ -21,16 +27,63 @@ public class PlatformerController : MonoBehaviour
 
     private bool isDashing = false;
 
+    private int coinsCollected = 0;
+
+    private int numDeaths = 0;
+
+    [SerializeField] private Animator animator;
+
+    [SerializeField] private SpriteRenderer sprite;
+
+    bool isMovingRight = true;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         rb = GetComponent<Rigidbody2D>();
+        animator = GetComponent<Animator>();
+        sprite = GetComponent<SpriteRenderer>();
+    }
+
+    public int getNumDeaths()
+    {
+        return numDeaths;
+    }
+
+    public void UpdateCoins()
+    {
+        coinsCollected++;
+        coinsText.text = "Coins: " + coinsCollected.ToString();
+    }
+
+    public void Respawn(Vector2 newPosition)
+    {
+        rb.position = newPosition;
+        rb.linearVelocity = Vector2.zero;
+        numDeaths++;
+        deathText.text = "Deaths: " + numDeaths.ToString();
     }
 
     // Update is called once per frame
     void Update()
     {
-        
+        animator.SetBool("isJumping", !isTouchingGround);
+        animator.SetBool("isRunning", Mathf.Abs(rb.linearVelocityX) > 0.01f);
+        if (isMovingRight && moveX < 0)
+        {
+            isMovingRight = false;
+            sprite.flipX = true;
+        }
+        else if (!isMovingRight && moveX > 0)
+        {
+            isMovingRight = true;
+            sprite.flipX = false;
+        }
+
+        if (rb.linearVelocityY < -10f)
+        {
+            rb.linearVelocityY = -10f;
+        }
     }
 
     private void FixedUpdate()
@@ -52,12 +105,12 @@ public class PlatformerController : MonoBehaviour
     {
         if (numJumps == 0 && isTouchingGround == true)
         {
-
             rb.AddForceY(jumpForce, ForceMode2D.Impulse);
             numJumps++;
         }
         else if (numJumps == 1 && isTouchingGround == false)
         {
+            rb.linearVelocityY = 0;
             rb.AddForceY(jumpForce, ForceMode2D.Impulse);
             numJumps++;
         }
@@ -78,11 +131,11 @@ public class PlatformerController : MonoBehaviour
 
         if (mousePos < 0)
         {
-            rb.AddForceX(-jumpForce, ForceMode2D.Impulse);
+            rb.AddForceX(-dashForce, ForceMode2D.Impulse);
         }
         else if (mousePos > 0)
         {
-            rb.AddForceX(jumpForce, ForceMode2D.Impulse);
+            rb.AddForceX(dashForce, ForceMode2D.Impulse);
         }
         else
         {
@@ -91,15 +144,15 @@ public class PlatformerController : MonoBehaviour
             switch (random)
             {
                 case 0:
-                    rb.AddForceX(-jumpForce, ForceMode2D.Impulse);
+                    rb.AddForceX(-dashForce, ForceMode2D.Impulse);
                     break;
                 case 1:
-                    rb.AddForceX(jumpForce, ForceMode2D.Impulse);
+                    rb.AddForceX(dashForce, ForceMode2D.Impulse);
                     break;
             }
         }
 
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(0.25f);
 
         dashCooldownRoutine = null;
         isDashing = false;
